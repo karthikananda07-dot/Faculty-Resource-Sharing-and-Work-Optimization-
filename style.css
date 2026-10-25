@@ -1,0 +1,6 @@
+.glass-card{background:rgba(30,41,59,.7);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1)}
+.inp{width:100%;background:#0f172a;border:1px solid #334155;border-radius:.25rem;padding:.5rem;color:#fff}
+.inp:focus{outline:none;border-color:#6366f1}
+.lbl{display:block;color:#94a3b8;margin-bottom:.25rem}
+body[data-role=faculty] [onclick^="removeFaculty"],body[data-role=faculty] [onclick^="removeResource"],body[data-role=faculty] [onclick^="removeTask"],body[data-role=faculty] .mgr-del,body[data-role=hod] [onclick^="removeFaculty"]{display:none}
+.tt td,.tt th{border:1px solid #1e293b}
