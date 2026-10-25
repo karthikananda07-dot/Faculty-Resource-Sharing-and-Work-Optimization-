@@ -62,7 +62,7 @@ def init_db():
 init_db()
 
 
-# ---------- live updates ----------
+
 class Hub:
     def __init__(self):
         self.clients = set()
@@ -105,7 +105,7 @@ async def ws_endpoint(ws: WebSocket):
         hub.disconnect(ws)
 
 
-# ---------- helpers ----------
+
 def day_of(date_str: str) -> str:
     try:
         return dt.date.fromisoformat(date_str).strftime("%a")  # Mon, Tue...
