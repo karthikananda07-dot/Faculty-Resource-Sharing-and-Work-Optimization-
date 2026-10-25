@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faculty Resource Sharing & Workload Optimizer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+<header class="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-40 backdrop-blur-md">
+ <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap gap-3 items-center justify-between">
+  <div class="flex items-center space-x-3">
+   <div class="p-2 bg-indigo-600 rounded-lg"><i class="fa-solid fa-scale-balanced text-xl text-white"></i></div>
+   <div>
+    <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Faculty Workload & Resource Optimizer</h1>
+    <p class="text-xs text-slate-400">Admin Dashboard</p>
+   </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+   <div class="relative"><button onclick="toggleNotes()" class="relative px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md border border-slate-700"><i class="fa-solid fa-bell"></i><span id="bell-n" class="hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] rounded-full px-1.5"></span></button>
+   <div id="notes" class="hidden absolute right-0 mt-2 w-72 max-h-80 overflow-y-auto rounded-xl p-3 space-y-2 text-xs border border-slate-700 z-50" style="background:#0f172a"></div></div>
+   <span id="who" class="text-xs text-slate-300 self-center px-1"></span>
+   <button onclick="logout()" title="Sign out" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md border border-slate-700"><i class="fa-solid fa-right-from-bracket"></i></button>
+   <button onclick="exportCSV()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md border border-slate-700"><i class="fa-solid fa-file-csv mr-1"></i> Export Report</button>
+   <button id="btn-sample" onclick="loadSample()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md border border-slate-700"><i class="fa-solid fa-rotate-left mr-1"></i> Load Sample Data</button>
+   <button id="btn-clear" onclick="clearAll()" class="px-3 py-1.5 text-xs bg-rose-900/30 hover:bg-rose-900/50 text-rose-300 rounded-md border border-rose-800/50"><i class="fa-solid fa-trash mr-1"></i> Clear All</button>
+  </div>
+ </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+ <!-- NEW: KPI strip -->
+ <div id="kpis" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+
+ <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-2" id="tabs">
+  <button id="tab-input" onclick="switchTab('input')" class="px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2"><i class="fa-solid fa-pen-to-square"></i> 1. Enter Data & Workload</button>
+  <button id="tab-optimizer" onclick="switchTab('optimizer')" class="px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 2. Run Optimizer</button>
+  <button id="tab-resources" onclick="switchTab('resources')" class="px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2"><i class="fa-solid fa-microscope"></i> 3. Resource Sharing</button>
+  <button id="tab-timetable" onclick="switchTab('timetable')" class="px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2"><i class="fa-solid fa-calendar-week"></i> 4. Timetable & Cover</button>
+ </div>
+
+ <!-- SECTION 1 -->
+ <section id="sec-input" class="space-y-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   <div class="glass-card p-5 rounded-xl space-y-4">
+    <h2 class="text-lg font-semibold text-indigo-400"><i class="fa-solid fa-user-plus mr-2"></i>Add Faculty Member</h2>
+    <form onsubmit="addFaculty(event)" id="form-faculty" class="space-y-3 text-sm">
+     <div><label class="lbl">Full Name</label><input id="f-name" class="inp" placeholder="Dr. Alan Turing" required></div>
+     <div><label class="lbl">Department</label><select id="f-dept" class="inp dept-sel"></select></div>
+     <div><label class="lbl">Max Capacity (Hours/Week)</label><input id="f-max" type="number" value="40" min="10" max="60" required class="inp"></div>
+     <div><label class="lbl">Expertise / Skills</label><input id="f-skills" class="inp" placeholder="AI, Machine Learning, Python" required></div>
+     <button class="w-full bg-indigo-600 hover:bg-indigo-500 py-2 rounded font-medium"><i class="fa-solid fa-plus mr-1"></i> Add Faculty</button>
+    </form>
+   </div>
+   <div class="glass-card p-5 rounded-xl space-y-4">
+    <h2 class="text-lg font-semibold text-purple-400"><i class="fa-solid fa-list-check mr-2"></i>Assign Task / Course</h2>
+    <form onsubmit="addTask(event)" id="form-task" class="space-y-3 text-sm">
+     <div><label class="lbl">Assign To Faculty</label><select id="t-faculty" required class="inp"></select></div>
+     <div><label class="lbl">Task / Course Title</label><input id="t-title" class="inp" placeholder="CS101: Intro to Algorithms" required></div>
+     <div class="grid grid-cols-2 gap-2">
+      <div><label class="lbl">Type</label><select id="t-type" class="inp"><option>Lecture</option><option>Lab Duty</option><option>Research</option><option>Admin Work</option></select></div>
+      <div><label class="lbl">Hours / Week</label><input id="t-hours" type="number" min="1" max="30" value="10" required class="inp"></div>
+     </div>
+     <button class="w-full bg-purple-600 hover:bg-purple-500 py-2 rounded font-medium"><i class="fa-solid fa-plus mr-1"></i> Add Workload Task</button>
+    </form>
+   </div>
+   <div class="glass-card p-5 rounded-xl space-y-4">
+    <h2 class="text-lg font-semibold text-emerald-400"><i class="fa-solid fa-box-archive mr-2"></i>Add Shared Resource</h2>
+    <form onsubmit="addResource(event)" id="form-resource" class="space-y-3 text-sm">
+     <div><label class="lbl">Resource Name</label><input id="r-name" class="inp" placeholder="GPU High-Perf Server Alpha" required></div>
+     <div><label class="lbl">Category</label><select id="r-cat" class="inp cat-sel"></select></div>
+     <div><label class="lbl">Owner Department</label><select id="r-dept" class="inp dept-sel"></select></div>
+     <button class="w-full bg-emerald-600 hover:bg-emerald-500 py-2 rounded font-medium"><i class="fa-solid fa-plus mr-1"></i> Add Shared Resource</button>
+    </form>
+   </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   <div class="glass-card p-5 rounded-xl space-y-3">
+    <h3 class="font-semibold text-slate-200 text-sm flex items-center justify-between gap-2">
+     <span><i class="fa-solid fa-users text-indigo-400 mr-2"></i>Current Faculty Workloads</span>
+     <span id="fac-badge" class="bg-indigo-900/50 text-indigo-300 text-xs px-2 py-0.5 rounded-full border border-indigo-700"></span>
+    </h3>
+    <input id="q-fac" oninput="render()" class="inp text-xs" placeholder="Search by name, department or skill...">
+    <div class="overflow-x-auto max-h-72 overflow-y-auto">
+     <table class="w-full text-left text-xs text-slate-300">
+      <thead class="bg-slate-900 text-slate-400 uppercase"><tr><th class="p-2">Name</th><th class="p-2">Dept</th><th class="p-2">Current / Max</th><th class="p-2">Status</th><th class="p-2 text-right">Action</th></tr></thead>
+      <tbody id="fac-body" class="divide-y divide-slate-800"></tbody>
+     </table>
+    </div>
+   </div>
+   <div class="glass-card p-5 rounded-xl space-y-3">
+    <h3 class="font-semibold text-slate-200 text-sm flex items-center justify-between">
+     <span><i class="fa-solid fa-cube text-emerald-400 mr-2"></i>Registered Resources</span>
+     <span id="res-badge" class="bg-emerald-900/50 text-emerald-300 text-xs px-2 py-0.5 rounded-full border border-emerald-700"></span>
+    </h3>
+    <div class="overflow-x-auto max-h-80 overflow-y-auto">
+     <table class="w-full text-left text-xs text-slate-300">
+      <thead class="bg-slate-900 text-slate-400 uppercase"><tr><th class="p-2">Resource</th><th class="p-2">Category</th><th class="p-2">Dept</th><th class="p-2">Status</th><th class="p-2"></th></tr></thead>
+      <tbody id="res-body" class="divide-y divide-slate-800"></tbody>
+     </table>
+    </div>
+   </div>
+  </div>
+ </section>
+
+ <!-- SECTION 2 -->
+ <section id="sec-optimizer" class="space-y-6 hidden">
+  <div class="glass-card p-5 rounded-xl border-indigo-500/30 space-y-4">
+   <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+    <div>
+     <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-bolt text-amber-400"></i> Workload Optimization Engine</h2>
+     <p class="text-xs text-slate-400">Moves tasks from overloaded faculty to colleagues with spare capacity. Preview the changes before applying.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+     <label class="text-xs text-slate-300 flex items-center gap-2"><input id="cross" type="checkbox" class="accent-indigo-500"> Allow cross-department</label>
+     <button onclick="previewOptimize()" class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold rounded-lg shadow-lg shadow-indigo-600/30 text-sm"><i class="fa-solid fa-play mr-1"></i> Preview Rebalance</button>
+     <button id="undo-btn" onclick="undoOptimize()" class="hidden px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm"><i class="fa-solid fa-rotate-left mr-1"></i> Undo</button>
+    </div>
+   </div>
+   <div id="proposal" class="hidden"></div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+   <div class="glass-card p-5 rounded-xl md:col-span-2 space-y-3">
+    <h3 class="text-sm font-semibold text-slate-300">Faculty Workload vs. Max Capacity (Hours/Week)</h3>
+    <div class="h-64"><canvas id="barChart"></canvas></div>
+   </div>
+   <div class="glass-card p-5 rounded-xl space-y-3">
+    <h3 class="text-sm font-semibold text-slate-300">Hours by Department</h3>
+    <div class="h-40"><canvas id="pieChart"></canvas></div>
+    <div id="metrics" class="space-y-2"></div>
+   </div>
+  </div>
+
+  <div class="space-y-3">
+   <div class="flex flex-wrap items-center justify-between gap-2">
+    <h3 class="font-semibold text-slate-200">Live Faculty Workload Status</h3>
+    <select id="f-status" onchange="render()" class="inp !w-auto text-xs"><option value="">All statuses</option><option>Overloaded</option><option>Optimal</option><option>Underutilized</option></select>
+   </div>
+   <div id="cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </div>
+ </section>
+
+ <!-- SECTION 3 -->
+ <section id="sec-resources" class="space-y-6 hidden">
+  <div class="glass-card p-5 rounded-xl space-y-4">
+   <div class="flex flex-wrap items-center justify-between gap-2">
+    <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-handshake text-emerald-400"></i> Resource Sharing & Booking Hub</h2>
+    <span class="text-xs text-slate-400">Request cross-department access to hardware and equipment</span>
+   </div>
+   <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+    <input id="q-res" oninput="render()" class="inp" placeholder="Search resources...">
+    <select id="f-cat" onchange="render()" class="inp cat-sel-all"></select>
+    <select id="f-avail" onchange="render()" class="inp"><option value="">All status</option><option>Available</option><option>Booked</option></select>
+   </div>
+   <div id="res-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </div>
+  <div class="glass-card p-5 rounded-xl space-y-3">
+   <h3 class="text-sm font-semibold text-slate-300"><i class="fa-solid fa-clock-rotate-left text-slate-400 mr-2"></i>Recent Booking Activity & Requests</h3>
+   <ul id="logs" class="space-y-2 text-xs text-slate-400"></ul>
+  </div>
+ </section>
+
+ <!-- SECTION 4 -->
+ <section id="sec-timetable" class="space-y-6 hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   <div class="glass-card p-5 rounded-xl space-y-3">
+    <h2 class="text-lg font-semibold text-sky-400"><i class="fa-solid fa-calendar-plus mr-2"></i>Add Class Slot</h2>
+    <form onsubmit="addSlot(event)" id="form-slot" class="space-y-3 text-sm">
+     <div><label class="lbl">Faculty</label><select id="s-fac" class="inp" required></select></div>
+     <div><label class="lbl">Class / Duty</label><input id="s-title" class="inp" placeholder="CS201 Lecture" required></div>
+     <div class="grid grid-cols-2 gap-2">
+      <div><label class="lbl">Day</label><select id="s-day" class="inp"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option></select></div>
+      <div><label class="lbl">Slot</label><select id="s-slot" class="inp"></select></div>
+     </div>
+     <button class="w-full bg-sky-600 hover:bg-sky-500 py-2 rounded font-medium"><i class="fa-solid fa-plus mr-1"></i> Add to Timetable</button>
+    </form>
+   </div>
+   <div class="glass-card p-5 rounded-xl lg:col-span-2 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+     <h2 class="text-lg font-semibold"><i class="fa-solid fa-calendar-week text-sky-400 mr-2"></i>Weekly Timetable</h2>
+     <select id="tt-fac" onchange="render()" class="inp !w-auto text-xs"></select>
+    </div>
+    <div class="overflow-x-auto"><table class="tt w-full text-xs text-center" id="tt-grid"></table></div>
+   </div>
+  </div>
+  <div class="glass-card p-5 rounded-xl space-y-3">
+   <h3 class="text-sm font-semibold text-slate-300"><i class="fa-solid fa-people-arrows text-sky-400 mr-2"></i>Substitute / Cover Requests</h3>
+   <div id="covers" class="space-y-2 text-xs"></div>
+  </div>
+ </section>
+</main>
+
+<!-- Booking modal -->
+<div id="modal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+ <form onsubmit="confirmBooking(event)" class="glass-card bg-slate-900 p-6 rounded-xl w-full max-w-sm space-y-3 text-sm">
+  <h3 id="m-title" class="text-lg font-semibold text-emerald-400"></h3>
+  <div><label class="lbl">Requested by</label><select id="m-fac" class="inp" required></select></div>
+  <div><label class="lbl">Date</label><input id="m-date" type="date" class="inp" required></div>
+  <div><label class="lbl">Time slot</label>
+   <select id="m-slot" class="inp"><option>09:00-11:00</option><option>11:00-13:00</option><option>14:00-16:00</option><option>16:00-18:00</option></select></div>
+  <div class="flex gap-2 pt-2">
+   <button type="button" onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-2 rounded">Cancel</button>
+   <button class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-2 rounded font-medium">Confirm</button>
+  </div>
+ </form>
+</div>
+<div id="cmodal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+ <form onsubmit="sendCover(event)" class="p-6 rounded-xl w-full max-w-sm space-y-3 text-sm border border-slate-700" style="background:#0f172a">
+  <h3 id="c-title" class="text-lg font-semibold text-sky-400"></h3>
+  <div><label class="lbl">Substitute (free at that time)</label><select id="c-sub" class="inp" required></select></div>
+  <div><label class="lbl">Reason</label><input id="c-why" class="inp" placeholder="Conference, leave..."></div>
+  <div class="flex gap-2 pt-2"><button type="button" onclick="document.getElementById('cmodal').classList.add('hidden')" class="flex-1 bg-slate-800 hover:bg-slate-700 py-2 rounded">Cancel</button><button class="flex-1 bg-sky-600 hover:bg-sky-500 py-2 rounded font-medium">Send</button></div>
+ </form>
+</div>
+<div id="login" class="hidden fixed inset-0 z-[70] bg-slate-950 flex items-center justify-center p-4">
+ <form onsubmit="doLogin(event)" class="p-6 rounded-xl w-full max-w-sm space-y-4 text-sm border border-slate-700" style="background:#0f172a">
+  <div class="text-center"><div class="inline-block p-3 bg-indigo-600 rounded-lg mb-2"><i class="fa-solid fa-scale-balanced text-2xl"></i></div><h2 class="text-lg font-bold">Sign in</h2><p class="text-xs text-slate-400">Demo login: choose a role to continue</p></div>
+  <div><label class="lbl">Role</label><select id="l-role" onchange="onRoleChange()" class="inp"><option value="admin">Admin</option><option value="hod">HOD</option><option value="faculty">Faculty</option></select></div>
+  <div id="l-fac-wrap" class="hidden"><label class="lbl">I am</label><select id="l-fac" class="inp"></select></div>
+  <button class="w-full bg-indigo-600 hover:bg-indigo-500 py-2 rounded font-medium">Enter</button>
+ </form>
+</div>
+<div id="toasts" class="fixed bottom-4 right-4 z-[60] space-y-2"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
