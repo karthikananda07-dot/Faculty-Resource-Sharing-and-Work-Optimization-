@@ -1,3 +1,4 @@
+from optimizer.substitute_solver import optimize_substitutes
 import json
 import sqlite3
 import datetime as dt
@@ -320,3 +321,71 @@ def list_assignments(date: str | None = None):
         q += " WHERE a.date=?"; args.append(date)
     with db() as c:
         return [dict(r) for r in c.execute(q + " ORDER BY a.id DESC", args)]
+# ---------- OR-Tools substitute optimizer ----------
+class OptimizeSubstitutesIn(BaseModel):
+    faculty_id: int
+    date: str
+
+
+@app.post("/optimize-substitutes")
+def optimize_substitutes_endpoint(request: OptimizeSubstitutesIn):
+    day = day_of(request.date)
+
+    with db() as c:
+        # Confirm that this faculty member has been recorded as absent.
+        absence = c.execute(
+            "SELECT id FROM absences WHERE faculty_id=? AND date=?",
+            (request.faculty_id, request.date)
+        ).fetchone()
+
+        if not absence:
+            raise HTTPException(
+                404,
+                "Record this faculty absence first using POST /absences."
+            )
+
+        faculty = [
+            dict(r) for r in c.execute("SELECT * FROM faculty")
+        ]
+
+        # Calculate current weekly teaching hours from the timetable.
+        weekly_hours = {
+            r["id"]: r["weekly_hours"]
+            for r in c.execute("""
+                SELECT f.id, COUNT(t.id) AS weekly_hours
+                FROM faculty f
+                LEFT JOIN timetable t ON t.faculty_id = f.id
+                GROUP BY f.id
+            """)
+        }
+
+        # Find the absent faculty member's affected classes.
+        slots = [
+            dict(r) for r in c.execute("""
+                SELECT * FROM timetable
+                WHERE faculty_id=? AND day=?
+                ORDER BY period
+            """, (request.faculty_id, day))
+        ]
+
+        # Add the date and available substitutes expected by the solver.
+        for slot in slots:
+            slot["date"] = request.date
+            slot["available_substitutes"] = free_faculty(
+                c, request.date, slot["period"]
+            )
+
+    recommendations = optimize_substitutes(
+        slots, faculty, weekly_hours
+    )
+
+    return {
+        "date": request.date,
+        "absent_faculty_id": request.faculty_id,
+        "recommendations": recommendations,
+        "saved": False,
+        "message": (
+            "Recommendations generated for review. "
+            "No assignments have been saved."
+        )
+    }
